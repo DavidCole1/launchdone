@@ -778,12 +778,15 @@ p  { color: var(--color-text); font-size: 1.0625rem; line-height: 1.75; }
   max-width: 320px;
   line-height: 1.6;
 }
-.footer__email a {
+.footer__email a,
+.footer__phone a {
   font-size: 0.9375rem;
   color: rgba(255,255,255,0.6);
   transition: color var(--transition);
 }
-.footer__email a:hover { color: white; }
+.footer__email a:hover,
+.footer__phone a:hover { color: white; }
+.footer__phone { margin-top: 6px; }
 
 .footer__nav { display: flex; flex-direction: column; gap: 12px; align-items: flex-end; }
 .footer__nav a {
