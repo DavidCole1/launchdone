@@ -32,6 +32,15 @@
         hamburger.setAttribute('aria-expanded', 'false');
       });
     });
+
+    /* Close mobile menu when the user scrolls */
+    window.addEventListener('scroll', function () {
+      if (hamburger.classList.contains('open')) {
+        hamburger.classList.remove('open');
+        mobileMenu.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+      }
+    }, { passive: true });
   }
 
   /* ----- Active nav link (match current page) ----- */
