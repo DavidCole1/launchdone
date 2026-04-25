@@ -88,6 +88,16 @@ describe('hamburger menu', () => {
     expect(hamburger.getAttribute('aria-expanded')).toBe('false');
   });
 
+  test('closes menu when the page is scrolled', () => {
+    const hamburger = document.querySelector('.nav__hamburger');
+    const mobileMenu = document.querySelector('.nav__mobile');
+    hamburger.click();
+    window.dispatchEvent(new Event('scroll'));
+    expect(hamburger.classList.contains('open')).toBe(false);
+    expect(mobileMenu.classList.contains('open')).toBe(false);
+    expect(hamburger.getAttribute('aria-expanded')).toBe('false');
+  });
+
   test('closes menu when a mobile nav link is clicked', () => {
     const hamburger = document.querySelector('.nav__hamburger');
     const mobileMenu = document.querySelector('.nav__mobile');
