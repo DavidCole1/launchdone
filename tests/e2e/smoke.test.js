@@ -94,7 +94,8 @@ test('anchor links scroll the page without a hard navigation', async ({ page }) 
   await anchorLink.click();
   // URL may gain a hash but should not navigate to a new page
   expect(page.url().replace(/#.*$/, '')).toBe(initialUrl.replace(/#.*$/, ''));
-  // Page should have scrolled down
+  // Wait for smooth scroll to settle then check position
+  await page.waitForFunction(() => window.scrollY > 0, { timeout: 2000 });
   const scrollY = await page.evaluate(() => window.scrollY);
   expect(scrollY).toBeGreaterThan(0);
 });
