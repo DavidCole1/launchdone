@@ -1,0 +1,7 @@
+{
+  "outputDirectory": ".",
+  "routes": [
+    { "src": "/game", "dest": "/game.html" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}
