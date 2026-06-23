@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GRAVITY SHIFT — LaunchDone</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;font-family:'Segoe UI',sans-serif}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#hud{position:absolute;top:20px;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:0 30px}
+.hud-box{background:rgba(0,0,0,0.5);border:1px solid rgba(100,200,255,0.3);border-radius:10px;padding:8px 20px;color:#fff;font-size:14px;letter-spacing:1px;text-transform:uppercase}
+.hud-val{font-size:24px;font-weight:700;color:#00e5ff;display:block;text-align:center}
+#screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,20,0.92);pointer-events:all}
+#screen.hidden{display:none}
+.screen-title{font-size:clamp(2.5rem,8vw,5rem);font-weight:900;letter-spacing:4px;text-transform:uppercase;margin-bottom:10px}
+.glow-cyan{color:#00e5ff;text-shadow:0 0 20px #00e5ff,0 0 60px #00e5ff55}
+.glow-green{color:#00ff88;text-shadow:0 0 20px #00ff88,0 0 60px #00ff8855}
+.glow-red{color:#ff4466;text-shadow:0 0 20px #ff4466,0 0 60px #ff446655}
+.screen-sub{color:#aaa;font-size:1.1rem;letter-spacing:2px;margin-bottom:40px;text-align:center;max-width:500px;line-height:1.7}
+.btn-play{padding:16px 60px;font-size:1.2rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;border:none;border-radius:50px;cursor:pointer;pointer-events:all;transition:all .2s;position:relative;overflow:hidden}
+.btn-play:hover{transform:scale(1.06)}
+.btn-cyan{background:linear-gradient(135deg,#00b4d8,#0077b6);color:#fff;box-shadow:0 0 30px #00e5ff88}
+.btn-green{background:linear-gradient(135deg,#00c853,#007c4c);color:#fff;box-shadow:0 0 30px #00ff8888}
+.levels-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:30px;width:340px}
+.lvl-btn{padding:14px 0;border:2px solid rgba(0,229,255,0.4);border-radius:10px;background:rgba(0,229,255,0.07);color:#00e5ff;font-size:1rem;font-weight:700;cursor:pointer;pointer-events:all;transition:all .2s;letter-spacing:1px}
+.lvl-btn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 20px #00e5ff55}
+.lvl-btn.hardest{border-color:#ff4466;color:#ff4466}
+.lvl-btn.hardest:hover{background:rgba(255,68,102,0.2);box-shadow:0 0 20px #ff446655}
+.difficulty-label{font-size:0.72rem;letter-spacing:1px;opacity:.7;margin-top:3px}
+#stars-row{color:#f0c040;font-size:1.3rem;margin-bottom:6px}
+canvas{display:block}
+#tap-hint{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.35);font-size:0.85rem;letter-spacing:2px;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud" style="display:none">
+    <div class="hud-box">Score<span class="hud-val" id="scoreVal">0</span></div>
+    <div class="hud-box" style="text-align:center">Level <span class="hud-val" id="levelVal">1</span><span style="color:#aaa;font-size:11px;display:block" id="diffVal"></span></div>
+    <div class="hud-box">Best<span class="hud-val" id="bestVal">0</span></div>
+  </div>
+
+  <!-- START SCREEN -->
+  <div id="screen" style="display:flex">
+    <div class="screen-title glow-cyan">GRAVITY<br>SHIFT</div>
+    <div class="screen-sub">Press SPACE or tap to flip gravity.<br>Survive the neon gauntlet — levels go from<br><span style="color:#ff4466">BRUTAL</span> → <span style="color:#00ff88">BREEZY</span></div>
+    <div class="levels-grid" id="levelSelect"></div>
+    <button class="btn-play btn-cyan" id="startBtn">▶ PLAY LEVEL 1</button>
+  </div>
+
+  <!-- DEAD SCREEN -->
+  <div id="deadScreen" class="hidden">
+    <div class="screen-title glow-red">GAME<br>OVER</div>
+    <div id="stars-row"></div>
+    <div class="screen-sub" id="deadMsg"></div>
+    <div style="display:flex;gap:16px">
+      <button class="btn-play btn-cyan" id="retryBtn">↺ RETRY</button>
+      <button class="btn-play" style="background:rgba(255,255,255,0.1);color:#fff;box-shadow:none;border:1px solid rgba(255,255,255,0.2)" id="menuBtn">MENU</button>
+    </div>
+  </div>
+
+  <!-- WIN SCREEN -->
+  <div id="winScreen" class="hidden">
+    <div class="screen-title glow-green">LEVEL<br>CLEAR!</div>
+    <div id="win-stars-row"></div>
+    <div class="screen-sub" id="winMsg"></div>
+    <div style="display:flex;gap:16px">
+      <button class="btn-play btn-green" id="nextBtn">NEXT LEVEL ▶</button>
+      <button class="btn-play" style="background:rgba(255,255,255,0.1);color:#fff;box-shadow:none;border:1px solid rgba(255,255,255,0.2)" id="menuBtn2">MENU</button>
+    </div>
+  </div>
+</div>
+
+<div id="tap-hint">SPACE / TAP to flip gravity</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize(){
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── LEVELS (10 → 1: HARD to EASY) ──────────────────────────────────
+const LEVELS = [
+  // { speed, gapH (fraction of H), wallFreq (ms), gravStrength, label }
+  { speed:9.5, gapFrac:0.20, wallMs:900,  grav:3200, label:'NIGHTMARE', color:'#ff2244' },  // 1
+  { speed:8.5, gapFrac:0.24, wallMs:950,  grav:3000, label:'BRUTAL',    color:'#ff5500' },  // 2
+  { speed:7.5, gapFrac:0.28, wallMs:1000, grav:2800, label:'SAVAGE',    color:'#ff8800' },  // 3
+  { speed:6.5, gapFrac:0.32, wallMs:1050, grav:2600, label:'HARD',      color:'#ffcc00' },  // 4
+  { speed:5.8, gapFrac:0.36, wallMs:1100, grav:2400, label:'TRICKY',    color:'#aaee00' },  // 5
+  { speed:5.0, gapFrac:0.40, wallMs:1200, grav:2200, label:'MEDIUM',    color:'#00ee88' },  // 6
+  { speed:4.2, gapFrac:0.46, wallMs:1300, grav:2000, label:'CHILL',     color:'#00ddff' },  // 7
+  { speed:3.5, gapFrac:0.52, wallMs:1450, grav:1800, label:'EASY',      color:'#0099ff' },  // 8
+  { speed:2.8, gapFrac:0.60, wallMs:1600, grav:1600, label:'BREEZY',    color:'#8844ff' },  // 9
+  { speed:2.0, gapFrac:0.72, wallMs:1900, grav:1400, label:'BABY MODE', color:'#ff44ff' },  // 10
+];
+
+// ── STATE ───────────────────────────────────────────────────────────
+let state = 'menu'; // menu | playing | dead | win
+let currentLevel = 0;
+let score = 0;
+let best = parseInt(localStorage.getItem('gs_best')||'0');
+let wallsCleared = 0;
+const WALLS_TO_WIN = 12;
+
+let player, walls, particles, bgStars, gravity, gravDir;
+let wallTimer = 0;
+let flashAlpha = 0;
+let screenShake = 0;
+
+// ── BACKGROUND STARS ────────────────────────────────────────────────
+function makeBgStars(){
+  bgStars = [];
+  for(let i=0;i<120;i++){
+    bgStars.push({x:Math.random()*W, y:Math.random()*H,
+      r:Math.random()*1.5, speed:Math.random()*0.5+0.1,
+      alpha:Math.random()*0.8+0.2});
+  }
+}
+
+// ── INIT GAME ───────────────────────────────────────────────────────
+function initGame(){
+  const lvl = LEVELS[currentLevel];
+  gravDir = 1;
+  gravity = 0;
+  player = {
+    x: W*0.18, y: H/2,
+    vy: 0, r: 14,
+    trail: [],
+    glow: 0,
+    dead: false
+  };
+  walls = [];
+  particles = [];
+  makeBgStars();
+  wallTimer = 0;
+  score = 0;
+  wallsCleared = 0;
+  flashAlpha = 0;
+  screenShake = 0;
+}
+
+// ── SPAWN WALL ───────────────────────────────────────────────────────
+function spawnWall(){
+  const lvl = LEVELS[currentLevel];
+  const gapH = H * lvl.gapFrac;
+  const minTop = H * 0.08;
+  const maxTop = H * 0.92 - gapH;
+  const gapY = minTop + Math.random()*(maxTop - minTop);
+  walls.push({ x: W + 30, gapY, gapH, w: 28, passed: false });
+}
+
+// ── PARTICLES ────────────────────────────────────────────────────────
+function burst(x, y, color, count=18){
+  for(let i=0;i<count;i++){
+    const a = Math.random()*Math.PI*2;
+    const s = 2 + Math.random()*6;
+    particles.push({
+      x, y,
+      vx: Math.cos(a)*s, vy: Math.sin(a)*s,
+      r: 2+Math.random()*4,
+      alpha: 1, color,
+      life: 0.8 + Math.random()*0.4
+    });
+  }
+}
+
+// ── FLIP GRAVITY ─────────────────────────────────────────────────────
+function flipGravity(){
+  if(state !== 'playing') return;
+  gravDir *= -1;
+  player.vy *= 0.3;
+  player.glow = 1;
+  burst(player.x, player.y, '#00e5ff', 10);
+  flashAlpha = 0.08;
+}
+
+// ── INPUT ─────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'||e.code==='ArrowDown'){
+    e.preventDefault();
+    flipGravity();
+  }
+});
+canvas.addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  flipGravity();
+});
+
+// ── BUILD LEVEL SELECT ────────────────────────────────────────────────
+const grid = document.getElementById('levelSelect');
+LEVELS.forEach((lvl, i)=>{
+  const b = document.createElement('button');
+  b.className = 'lvl-btn' + (i===0?' hardest':'');
+  b.style.borderColor = lvl.color + '99';
+  b.style.color = lvl.color;
+  b.innerHTML = `${i+1}<div class="difficulty-label">${lvl.label}</div>`;
+  b.addEventListener('click', ()=>{
+    currentLevel = i;
+    document.getElementById('startBtn').textContent = `▶ PLAY LEVEL ${i+1}`;
+  });
+  grid.appendChild(b);
+});
+
+// ── BUTTON HANDLERS ───────────────────────────────────────────────────
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('retryBtn').addEventListener('click', ()=>{ showScreen(null); startGame(); });
+document.getElementById('menuBtn').addEventListener('click', showMenu);
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  if(currentLevel < LEVELS.length-1) currentLevel++;
+  showScreen(null); startGame();
+});
+document.getElementById('menuBtn2').addEventListener('click', showMenu);
+
+function showMenu(){
+  state='menu';
+  showScreen('screen');
+  document.getElementById('hud').style.display='none';
+}
+
+function showScreen(id){
+  ['screen','deadScreen','winScreen'].forEach(s=>{
+    const el = document.getElementById(s);
+    if(s===id){ el.style.display='flex'; el.classList.remove('hidden'); }
+    else       { el.style.display='none'; el.classList.add('hidden'); }
+  });
+}
+
+function startGame(){
+  showScreen(null);
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('tap-hint').style.display='block';
+  state = 'playing';
+  initGame();
+}
+
+// ── STARS RATING ─────────────────────────────────────────────────────
+function starsFor(score){
+  if(score >= 1200) return 3;
+  if(score >= 700)  return 2;
+  return 1;
+}
+
+// ── UPDATE ────────────────────────────────────────────────────────────
+let last = 0;
+function update(ts){
+  const dt = Math.min((ts - last)/1000, 0.05);
+  last = ts;
+
+  if(state !== 'playing'){ return; }
+
+  const lvl = LEVELS[currentLevel];
+
+  // gravity
+  gravity += gravDir * lvl.grav * dt;
+  const maxVy = H * 1.2;
+  gravity = Math.max(-maxVy, Math.min(maxVy, gravity));
+  player.vy += gravity * dt;
+  player.y  += player.vy * dt;
+
+  // trail
+  player.trail.push({x:player.x, y:player.y, alpha:0.6});
+  if(player.trail.length > 16) player.trail.shift();
+  player.trail.forEach(t=>{ t.alpha -= 0.04; });
+
+  player.glow = Math.max(0, player.glow - dt*3);
+
+  // walls
+  wallTimer += dt * 1000;
+  if(wallTimer >= lvl.wallMs){
+    spawnWall();
+    wallTimer = 0;
+  }
+
+  for(let i = walls.length-1; i>=0; i--){
+    const w = walls[i];
+    w.x -= lvl.speed * 60 * dt;
+    if(w.x + w.w < 0){ walls.splice(i,1); continue; }
+
+    // score when cleared
+    if(!w.passed && w.x + w.w < player.x - player.r){
+      w.passed = true;
+      score += 100;
+      wallsCleared++;
+      burst(player.x + 30, player.y, LEVELS[currentLevel].color, 8);
+    }
+
+    // collision
+    if(player.x + player.r > w.x && player.x - player.r < w.x + w.w){
+      const inTopWall  = player.y - player.r < w.gapY;
+      const inBotWall  = player.y + player.r > w.gapY + w.gapH;
+      if(inTopWall || inBotWall){ die(); return; }
+    }
+  }
+
+  // floor/ceiling
+  if(player.y - player.r < 0 || player.y + player.r > H){ die(); return; }
+
+  // score tick
+  score += Math.round(30 * dt);
+
+  // bg stars parallax
+  bgStars.forEach(s=>{ s.x -= s.speed * lvl.speed * dt * 20; if(s.x < 0) s.x = W; });
+
+  // particles
+  for(let i = particles.length-1; i>=0; i--){
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.93; p.vy *= 0.93;
+    p.alpha -= dt / p.life;
+    if(p.alpha <= 0) particles.splice(i,1);
+  }
+
+  flashAlpha = Math.max(0, flashAlpha - dt*2);
+  screenShake = Math.max(0, screenShake - dt*8);
+
+  // update HUD
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('levelVal').textContent = currentLevel+1;
+  document.getElementById('diffVal').textContent  = LEVELS[currentLevel].label;
+  document.getElementById('bestVal').textContent  = Math.max(best, score);
+
+  // win condition
+  if(wallsCleared >= WALLS_TO_WIN){ winLevel(); }
+}
+
+function die(){
+  state = 'dead';
+  screenShake = 1;
+  burst(player.x, player.y, '#ff4466', 30);
+  if(score > best){ best = score; localStorage.setItem('gs_best', best); }
+  setTimeout(()=>{
+    const s = starsFor(score);
+    document.getElementById('stars-row').textContent = '★'.repeat(s) + '☆'.repeat(3-s);
+    document.getElementById('deadMsg').innerHTML =
+      `Score: <b style="color:#00e5ff">${score}</b> &nbsp;|&nbsp; Best: <b style="color:#00ff88">${best}</b><br><br>` +
+      (s===3 ? 'Incredible run!' : s===2 ? 'Great run — so close!' : 'Keep going, you\'ll get it!');
+    showScreen('deadScreen');
+    document.getElementById('hud').style.display='none';
+  }, 600);
+}
+
+function winLevel(){
+  state = 'win';
+  burst(player.x, player.y, '#00ff88', 40);
+  if(score > best){ best = score; localStorage.setItem('gs_best', best); }
+  setTimeout(()=>{
+    const s = starsFor(score);
+    document.getElementById('win-stars-row').textContent = '★'.repeat(s) + '☆'.repeat(3-s);
+    const isLast = currentLevel === LEVELS.length-1;
+    document.getElementById('winMsg').innerHTML =
+      `Score: <b style="color:#00e5ff">${score}</b><br><br>` +
+      (isLast ? '🏆 You cleared ALL 10 LEVELS — you\'re a legend!' :
+                `Level ${currentLevel+1} crushed! Next: <b style="color:${LEVELS[currentLevel+1].color}">${LEVELS[currentLevel+1].label}</b>`);
+    document.getElementById('nextBtn').style.display = isLast ? 'none' : '';
+    showScreen('winScreen');
+    document.getElementById('hud').style.display='none';
+  }, 500);
+}
+
+// ── DRAW ──────────────────────────────────────────────────────────────
+function draw(){
+  const sx = screenShake > 0 ? (Math.random()-0.5)*screenShake*12 : 0;
+  const sy = screenShake > 0 ? (Math.random()-0.5)*screenShake*12 : 0;
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  // background
+  const bgGrad = ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,'#050510');
+  bgGrad.addColorStop(1,'#0a0a25');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(-20,-20,W+40,H+40);
+
+  // stars
+  bgStars.forEach(s=>{
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+    ctx.fill();
+  });
+
+  // scanlines
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  for(let y=0; y<H; y+=3){
+    ctx.fillRect(-20, y, W+40, 1);
+  }
+
+  if(state === 'playing' || state === 'dead'){
+    const lvl = LEVELS[currentLevel];
+
+    // walls
+    walls.forEach(w=>{
+      // top wall
+      const tg = ctx.createLinearGradient(w.x, 0, w.x+w.w, 0);
+      tg.addColorStop(0, lvl.color+'99');
+      tg.addColorStop(0.5, lvl.color);
+      tg.addColorStop(1, lvl.color+'99');
+      ctx.fillStyle = tg;
+      ctx.fillRect(w.x, 0, w.w, w.gapY);
+      // bottom wall
+      ctx.fillRect(w.x, w.gapY + w.gapH, w.w, H - w.gapY - w.gapH);
+      // glow edges
+      ctx.shadowColor = lvl.color;
+      ctx.shadowBlur  = 18;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(w.x + w.w/2, w.gapY);
+      ctx.lineTo(w.x + w.w/2, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(w.x + w.w/2, w.gapY + w.gapH);
+      ctx.lineTo(w.x + w.w/2, H);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
+
+    // trail
+    player.trail.forEach((t, i)=>{
+      const frac = i / player.trail.length;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, player.r * frac * 0.8, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(0,229,255,${t.alpha * frac * 0.5})`;
+      ctx.fill();
+    });
+
+    // player
+    const gr = player.r + 8 + player.glow*12;
+    const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, gr);
+    grd.addColorStop(0, '#ffffff');
+    grd.addColorStop(0.3,'#00e5ff');
+    grd.addColorStop(1, 'rgba(0,229,255,0)');
+    ctx.fillStyle = grd;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur  = 30 + player.glow*20;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, gr, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // gravity arrow
+    const arrY = player.y + gravDir * 28;
+    ctx.strokeStyle = gravDir===1 ? '#ff4466' : '#00ff88';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y + gravDir*player.r);
+    ctx.lineTo(player.x, arrY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(player.x - 6, arrY - gravDir*6);
+    ctx.lineTo(player.x, arrY);
+    ctx.lineTo(player.x + 6, arrY - gravDir*6);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // progress bar
+    const barW = W * 0.5;
+    const barX = (W - barW)/2;
+    const barY = H - 22;
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW, 8, 4);
+    ctx.fill();
+    const prog = Math.min(wallsCleared / WALLS_TO_WIN, 1);
+    const pgrd = ctx.createLinearGradient(barX, 0, barX+barW, 0);
+    pgrd.addColorStop(0, '#00e5ff');
+    pgrd.addColorStop(1, '#00ff88');
+    ctx.fillStyle = pgrd;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW*prog, 8, 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${wallsCleared} / ${WALLS_TO_WIN}`, W/2, barY - 5);
+  }
+
+  // particles
+  particles.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = p.color + Math.floor(p.alpha*255).toString(16).padStart(2,'0');
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 10;
+    ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  // flash
+  if(flashAlpha > 0){
+    ctx.fillStyle = `rgba(0,229,255,${flashAlpha})`;
+    ctx.fillRect(-20,-20,W+40,H+40);
+  }
+
+  ctx.restore();
+}
+
+// ── LOOP ──────────────────────────────────────────────────────────────
+function loop(ts){
+  update(ts);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+makeBgStars();
+document.getElementById('bestVal') && (document.getElementById('bestVal').textContent = best);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
