@@ -23,7 +23,7 @@
   <script>
   (async()=>{
     try{
-      const base='https://raw.githubusercontent.com/DavidCole1/launchdone/chronocore-hosting/chronocore/';
+      const base='https://raw.githubusercontent.com/DavidCole1/launchdone/main/chronocore/';
       const parts=await Promise.all([1,2,3,4,5].map(async n=>{
         const r=await fetch(base+'payload-'+n+'.txt',{cache:'no-store'});
         if(!r.ok) throw new Error('Bundle segment '+n+' could not be loaded');
