@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#07100f" />
+  <title>ChronoCore</title>
+  <style>
+    html,body{height:100%;margin:0;background:#07100f;color:#dffcf3;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{display:grid;place-items:center;overflow:hidden}
+    .boot{display:grid;gap:18px;place-items:center;text-align:center;letter-spacing:.08em}
+    .mark{width:58px;height:58px;border:1px solid rgba(111,255,211,.5);border-radius:16px;display:grid;place-items:center;box-shadow:0 0 38px rgba(87,255,203,.12)}
+    .ring{width:24px;height:24px;border:2px solid rgba(202,255,239,.18);border-top-color:#75ffd4;border-radius:50%;animation:s .8s linear infinite}
+    .name{font-size:13px;font-weight:700}.sub{font-size:10px;color:#77958c}
+    @keyframes s{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="boot" id="boot">
+    <div class="mark"><div class="ring"></div></div>
+    <div><div class="name">CHRONOCORE</div><div class="sub">INITIALIZING WORKSPACE</div></div>
+  </div>
+  <script>
+  (async()=>{
+    try{
+      const base='https://raw.githubusercontent.com/DavidCole1/launchdone/chronocore-hosting/chronocore/';
+      const parts=await Promise.all([1,2,3,4,5].map(async n=>{
+        const r=await fetch(base+'payload-'+n+'.txt',{cache:'no-store'});
+        if(!r.ok) throw new Error('Bundle segment '+n+' could not be loaded');
+        return (await r.text()).trim();
+      }));
+      const b64=parts.join('');
+      const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+      if(!('DecompressionStream' in window)) throw new Error('This browser needs gzip stream support');
+      const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      const html=await new Response(stream).text();
+      document.open(); document.write(html); document.close();
+    }catch(err){
+      document.getElementById('boot').innerHTML='<div class="mark">!</div><div><div class="name">CHRONOCORE COULD NOT START</div><div class="sub" style="max-width:420px;line-height:1.7">'+String(err.message||err)+'</div></div>';
+      console.error(err);
+    }
+  })();
+  </script>
+</body>
+</html>
